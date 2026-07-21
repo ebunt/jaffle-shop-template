@@ -1,0 +1,35 @@
+name: Main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Full dbt build & save state
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run dbt deps --project-dir dbt --profiles-dir dbt
+      - run: >
+          uv run dbt build --project-dir dbt --profiles-dir dbt
+          --vars '{"load_source_data": true}'
+
+      # Saved as this run's "prod state": PR builds restore it to diff
+      # against (`state:modified`) and to defer unselected nodes to,
+      # per https://docs.getdbt.com/best-practices/best-practice-workflows#run-only-modified-models-to-test-changes-slim-ci
+      - name: Stage dbt state for caching
+        run: |
+          mkdir -p ci-state
+          cp dbt/target/manifest.json ci-state/
+          cp jaffle_shop.duckdb ci-state/
+
+      - uses: actions/cache/save@v4
+        with:
+          path: ci-state
+          key: dbt-state-main-${{ github.sha }}
