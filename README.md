@@ -61,7 +61,7 @@ The project ships with both a `Makefile` and a `Taskfile.yml` covering the same 
 | `clean`   | `make clean`           | `task clean`           | Remove generated seed data                              |
 | `load`    | `make load`            | `task load`            | Full pipeline: venv → install → gen → seed → clean      |
 
-`seed`, `run`, `test`, and `build` all depend on `deps` and will install dbt packages automatically before running.
+`seed`, `run`, `test`, and `build` all depend on `deps` and will install dbt packages automatically before running. `run`, `test`, and `build` also seed the warehouse first — the staging models read from the seeds via `source()`, not `ref()`, so dbt won't do this for you automatically.
 
 To pass extra dbt flags through, e.g. to run a single model or a specific target:
 
