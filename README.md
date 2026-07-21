@@ -21,7 +21,8 @@ Ready to go? Grab some water and a nice snack, and let's dig in!
 ## Table of contents
 
 1. [Prerequisites](#-prerequisites)
-2. [Create new repo from template](#-create-new-repo-from-template)
+2. [Local commands (Make / Task)](#-local-commands-make--task)
+3. [Create new repo from template](#-create-new-repo-from-template)
 3. [Platform setup](#%EF%B8%8F-platform-setup)
    1. [dbt Cloud IDE](#%EF%B8%8F-dbt-cloud-ide-most-beginner-friendly)
    2. [dbt Cloud CLI](#-dbt-cloud-cli-if-you-prefer-to-work-locally)
@@ -42,6 +43,32 @@ Ready to go? Grab some water and a nice snack, and let's dig in!
 - A dbt Cloud account
 - A data warehouse (BigQuery, Snowflake, Redshift, Databricks, or Postgres) with adequate permissions to create a fresh database for this project and run dbt in it
 - _Optional_ Python 3.9 or higher (for generating synthetic data with `jafgen`)
+
+## 🧰 Local commands (Make / Task)
+
+The project ships with both a `Makefile` and a `Taskfile.yml` covering the same set of local commands, so use whichever you have installed — `make` is preinstalled on most systems; `task` can be installed [here](https://taskfile.dev/#/installation). All commands operate on the dbt project in `dbt/`.
+
+| Target    | `make`                | `task`                | Description                                          |
+|-----------|------------------------|------------------------|-------------------------------------------------------|
+| `venv`    | `make venv`            | `task venv`            | Create a virtual environment with `uv`                 |
+| `install` | `make install`         | `task install`         | Install project dependencies with `uv`                 |
+| `gen`     | `make gen YEARS=6`     | `task gen YEARS=6`     | Generate synthetic seed data with `jafgen`              |
+| `deps`    | `make deps`            | `task deps`            | Install dbt package dependencies (`dbt deps`)           |
+| `seed`    | `make seed`            | `task seed`            | Seed the warehouse with the generated data              |
+| `run`     | `make run`             | `task run`             | Run dbt models (`dbt run`)                              |
+| `test`    | `make test`            | `task test`            | Run dbt tests (`dbt test`)                              |
+| `build`   | `make build`           | `task build`           | Run `dbt build` (seed, run, test)                       |
+| `clean`   | `make clean`           | `task clean`           | Remove generated seed data                              |
+| `load`    | `make load`            | `task load`            | Full pipeline: venv → install → gen → seed → clean      |
+
+`seed`, `run`, `test`, and `build` all depend on `deps` and will install dbt packages automatically before running.
+
+To pass extra dbt flags through, e.g. to run a single model or a specific target:
+
+```bash
+make run ARGS="-s customers"
+task run -- -s customers
+```
 
 ## 📓 Create new repo from template
 

@@ -4,32 +4,48 @@ silent: true
 
 vars:
   YEARS: 6
-  DB: bigquery
 
 tasks:
   venv:
     cmds:
-      - python3 -m venv .venv
+      - uv venv
 
   install:
     cmds:
-      - source .venv/bin/activate && python3 -m pip install --upgrade pip --progress-bar off > /dev/null
-      - source .venv/bin/activate && python3 -m pip install -r requirements.txt --progress-bar off > /dev/null
-      - source .venv/bin/activate && python3 -m pip install dbt-core dbt-{{.DB}} > /dev/null
+      - uv pip install -q -r requirements.txt
 
   gen:
     cmds:
-      - source .venv/bin/activate && jafgen {{.YEARS}} && rm -rf seeds/jaffle-data && mv jaffle-data seeds
+      - cd dbt && uv run jafgen {{.YEARS}} && rm -rf seeds/jaffle-data && mv jaffle-data seeds
+
+  deps:
+    cmds:
+      - uv run dbt deps --project-dir dbt --profiles-dir dbt
 
   seed:
     cmds:
+      - task: deps
       - >
-        source .venv/bin/activate && dbt seed --full-refresh --vars '{"load_source_data": true}'
+        uv run dbt seed --project-dir dbt --profiles-dir dbt --full-refresh --vars '{"load_source_data": true}' {{.CLI_ARGS}}
+
+  run:
+    cmds:
+      - task: deps
+      - uv run dbt run --project-dir dbt --profiles-dir dbt {{.CLI_ARGS}}
+
+  test:
+    cmds:
+      - task: deps
+      - uv run dbt test --project-dir dbt --profiles-dir dbt {{.CLI_ARGS}}
+
+  build:
+    cmds:
+      - task: deps
+      - uv run dbt build --project-dir dbt --profiles-dir dbt {{.CLI_ARGS}}
 
   clean:
     cmds:
-      - rm -rf jaffle-data
-      - source .venv/bin/activate && python3 -m pip uninstall dbt-core dbt-{{.DB}} -y
+      - rm -rf dbt/jaffle-data
 
   load:
     cmds:
