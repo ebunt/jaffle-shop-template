@@ -96,6 +96,15 @@ seeds:
 models:
   jaffle_shop:
     +table_type: iceberg # ignored by the duckdb adapter; used by the athena/prod target
+    # Other athena/Iceberg model config -- uncomment what you want (all
+    # ignored by the duckdb adapter, only apply to the athena/prod target):
+    +native_drop: true # skip dbt's manual S3 delete on drop/full-refresh; let Iceberg's own DROP TABLE clean up instead (generally the right call for Iceberg tables)
+    # +format: parquet # file format; parquet is already the default if unset
+    # +write_compression: zstd # compression codec, e.g. snappy (default), zstd, gzip
+    # +partitioned_by: ["ordered_at"] # columns to partition on -- pick columns commonly filtered on
+    # +table_properties: # arbitrary Iceberg table properties (tblproperties)
+    #   vacuum_max_snapshot_age_seconds: "604800"
+    # +external_location: "s3://bucket/custom/path/" # override the computed S3 path for this model
     staging:
       +materialized: view
     marts:
