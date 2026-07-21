@@ -8,7 +8,6 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_ecr_assets as ecr_assets,
     aws_ecs as ecs,
-    aws_glue as glue,
     aws_iam as iam,
     aws_logs as logs,
     aws_s3 as s3,
@@ -53,33 +52,22 @@ class JaffleShopStack(Stack):
             auto_delete_objects=True,
         )
 
-        glue_database = glue.CfnDatabase(
-            self,
-            "GlueDatabase",
-            catalog_id=Aws.ACCOUNT_ID,
-            database_input=glue.CfnDatabase.DatabaseInputProperty(
-                name=GLUE_DATABASE_NAME
-            ),
-        )
-        raw_glue_database = glue.CfnDatabase(
-            self,
-            "RawGlueDatabase",
-            catalog_id=Aws.ACCOUNT_ID,
-            database_input=glue.CfnDatabase.DatabaseInputProperty(
-                name=RAW_DATABASE_NAME
-            ),
-        )
+        # Both Glue Databases (jaffle_shop, raw) are pre-existing -- from
+        # prior dbt Cloud runs against this account -- so this stack only
+        # references them by name via IAM, and never creates or (on
+        # `cdk destroy`) deletes them.
 
-        # Build for linux/amd64 explicitly: FargateTaskDefinition defaults to
-        # X86_64, but DockerImageAsset otherwise builds for the host's
-        # architecture (e.g. arm64 on Apple Silicon), which would fail at
-        # container start with an exec format error.
+        # Build for linux/arm64 explicitly: paired with runtime_platform=ARM64
+        # below, this runs the task on Graviton (cheaper than X86_64) and
+        # matches this repo's Apple Silicon dev machines for native
+        # (non-emulated) local `docker build`. The base image
+        # (ghcr.io/astral-sh/uv) publishes both platforms.
         image_asset = ecr_assets.DockerImageAsset(
             self,
             "DbtImage",
             directory=str(REPO_ROOT),
             file="Dockerfile",
-            platform=ecr_assets.Platform.LINUX_AMD64,
+            platform=ecr_assets.Platform.LINUX_ARM64,
         )
 
         cluster = ecs.Cluster(self, "Cluster", vpc=vpc)
@@ -115,6 +103,8 @@ class JaffleShopStack(Stack):
                     "glue:GetDatabases",
                     "glue:GetTable",
                     "glue:GetTables",
+                    "glue:GetTableVersion",
+                    "glue:GetTableVersions",
                     "glue:GetPartition",
                     "glue:GetPartitions",
                     "glue:BatchGetPartition",
@@ -150,6 +140,10 @@ class JaffleShopStack(Stack):
             "DbtBuildTaskDef",
             cpu=1024,
             memory_limit_mib=2048,
+            runtime_platform=ecs.RuntimePlatform(
+                cpu_architecture=ecs.CpuArchitecture.ARM64,
+                operating_system_family=ecs.OperatingSystemFamily.LINUX,
+            ),
             task_role=task_role,  # ty: ignore[invalid-argument-type]
         )
         task_definition.add_container(
@@ -164,9 +158,6 @@ class JaffleShopStack(Stack):
                 "DBT_ATHENA_WORKGROUP": ATHENA_WORKGROUP,
             },
         )
-        # The task queries these databases, which must exist before the first run.
-        task_definition.node.add_dependency(glue_database)
-        task_definition.node.add_dependency(raw_glue_database)
 
         task_security_group = ec2.SecurityGroup(
             self,

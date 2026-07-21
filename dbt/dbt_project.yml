@@ -24,6 +24,18 @@ clean-targets:
 vars:
   "dbt_date:time_zone": "America/Los_Angeles"
 
+# dbt-athena's adapter.type() is "athena", so dbt_date's internal dispatch
+# only tries athena__* then default__* macros within the dbt_date package --
+# it has no athena__convert_timezone, so it falls through to
+# default__convert_timezone, which emits a raw `convert_timezone(...)` SQL
+# call Trino doesn't have. dbt_date does ship a working trino__convert_timezone,
+# so this tells dispatch to check our own project's macros (which provide an
+# athena__convert_timezone shim -- see macros/athena_dispatch.sql) before
+# falling back to dbt_date's own resolution.
+dispatch:
+  - macro_namespace: dbt_date
+    search_order: ["jaffle_shop", "dbt_date"]
+
 seeds:
   jaffle_shop:
     +schema: raw

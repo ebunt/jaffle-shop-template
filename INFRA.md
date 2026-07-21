@@ -109,13 +109,15 @@ synthetic seed data, then seed/run/test. `infra/`'s `ecr_assets.DockerImageAsset
 builds this image and CDK pushes it to a CDK-managed asset ECR repo (there's
 no hand-maintained ECR repo to look after).
 
-The asset is built with `platform=ecr_assets.Platform.LINUX_AMD64` pinned
-explicitly. Without this, the image builds for whatever architecture your
-machine is (e.g. arm64 on Apple Silicon), while the Fargate task definition
-defaults to X86_64 — a mismatch that fails at container start with an exec
-format error, not at `cdk deploy` time. Pinning the platform means the
-image always matches the task definition regardless of what machine (or CI
-runner) runs `cdk deploy`.
+The asset is built with `platform=ecr_assets.Platform.LINUX_ARM64` pinned
+explicitly, paired with `runtime_platform=CpuArchitecture.ARM64` on the task
+definition — the task runs on Graviton, which is cheaper than the Fargate
+X86_64 default. Pinning both explicitly (rather than relying on defaults)
+also means the image always matches the task definition regardless of what
+machine (or CI runner) runs `cdk deploy` — without it, the image builds for
+whatever architecture the machine running `cdk deploy` happens to be,
+which would silently mismatch a differently-configured task definition and
+fail at container start with an exec format error, not at deploy time.
 
 ### A task, not a service
 
@@ -146,9 +148,12 @@ the execution role, and not the scheduler role.
   Athena's `SHOW TABLES IN jaffle_shop` and dbt's `schema` config refer to,
   used by staging views and marts) and `raw` (seeds land here instead —
   `dbt/macros/generate_schema_name.sql` hardcodes seeds to a `raw` schema
-  regardless of target). CDK creates both (`glue.CfnDatabase` x2) so they
-  exist before the first task run; the task definition has an explicit
-  `add_dependency(...)` on each to enforce that ordering in CloudFormation.
+  regardless of target). Both already existed in this account from prior
+  dbt Cloud runs before this stack existed, so CDK only references them by
+  name via IAM — it never creates them, and `cdk destroy` never deletes
+  them. If you're deploying into an account where they *don't* already
+  exist, you'll need to create them yourself (or add `glue.CfnDatabase`
+  resources back into the stack) before the first run.
   The task role's Glue IAM policy is scoped to both databases — if you add a
   third schema to the dbt project, it needs a matching database + IAM update
   here.
@@ -348,7 +353,7 @@ everything else the stack created — see
 
 | Symptom | Likely cause |
 |---|---|
-| Task stops immediately with an exec format error | Image built for the wrong architecture — shouldn't happen given `Platform.LINUX_AMD64` is pinned, but check if that got removed. |
+| Task stops immediately with an exec format error | Image built for the wrong architecture — shouldn't happen given `Platform.LINUX_ARM64` is pinned to match `CpuArchitecture.ARM64` on the task definition, but check if either got removed or the two drifted apart. |
 | Task can't reach PyPI / dbt Hub (`dbt deps` hangs or times out) | Confirm the task actually got a public IP (`assignPublicIp=ENABLED` in the network config) — without one, a public-subnet-only task with no NAT has no route out. |
 | `AccessDenied` on a Glue or Athena call | The task role's policy is scoped to the `jaffle_shop`/`raw` databases and their tables, and the `primary` workgroup, specifically — a new database/workgroup name needs a matching IAM resource ARN update in `stack.py`. |
 | Scheduler shows the run failed to even start (never reaches CloudWatch Logs) | Check `SchedulerExecutionRole`'s permissions, not the task role — this is EventBridge Scheduler failing to call `ecs:RunTask` at all, before the container ever starts. |
