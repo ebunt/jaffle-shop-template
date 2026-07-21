@@ -19,3 +19,7 @@
 {% macro fabric__cents_to_dollars(column_name) %}
     cast({{ column_name }} / 100 as numeric(16,2))
 {% endmacro %}
+
+{% macro athena__cents_to_dollars(column_name) -%}
+    (cast({{ column_name }} as decimal(16, 2)) / 100)
+{%- endmacro %}

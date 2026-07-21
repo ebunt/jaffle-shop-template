@@ -1,3 +1,4 @@
+dbt-athena-community
 dbt-duckdb
 go-task-bin
 jafgen
