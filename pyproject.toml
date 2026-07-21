@@ -20,3 +20,10 @@ dev = [
     "ruff>=0.15.22",
     "ty>=0.0.61",
 ]
+
+[tool.ty.src]
+# infra/ is a self-contained CDK app with its own venv/requirements.txt (see
+# INFRA.md) -- aws-cdk-lib/constructs aren't part of this project's
+# dependencies, so the root .venv can't resolve infra/'s imports. Explicit
+# paths (e.g. `ty check infra` from infra/'s own venv) still check it.
+exclude = ["infra"]
