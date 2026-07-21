@@ -93,9 +93,9 @@ class JaffleShopStack(Stack):
         #     ),
         # )
         #
-        # ...and add a dependency so the task waits for them to exist:
-        # task_definition.node.add_dependency(glue_database)
-        # task_definition.node.add_dependency(raw_glue_database)
+        # ...and add a dependency once `task_definition` exists (see the
+        # commented lines right after `task_definition.add_container(...)`
+        # below) so the task waits for them to exist.
 
         # Build for linux/arm64 explicitly: paired with runtime_platform=ARM64
         # below, this runs the task on Graviton (cheaper than X86_64) and
@@ -198,6 +198,10 @@ class JaffleShopStack(Stack):
                 "DBT_ATHENA_WORKGROUP": ATHENA_WORKGROUP,
             },
         )
+        # If you uncommented the glue.CfnDatabase blocks above, uncomment
+        # these too so the task waits for them to exist:
+        # task_definition.node.add_dependency(glue_database)
+        # task_definition.node.add_dependency(raw_glue_database)
 
         task_security_group = ec2.SecurityGroup(
             self,
