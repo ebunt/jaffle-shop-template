@@ -1,6 +1,6 @@
-pre-commit
-requests
-jafgen
 dbt-duckdb
 go-task-bin
+jafgen
+prek
+requests
 sqlfluff-templater-dbt
