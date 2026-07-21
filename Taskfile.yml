@@ -53,9 +53,15 @@ tasks:
       - task: _ensure-seeded
       - uv run dbt build --project-dir dbt --profiles-dir dbt {{.CLI_ARGS}}
 
+  clean-data:
+    cmds:
+      - rm -rf dbt/seeds/jaffle-data
+
   clean:
     cmds:
-      - rm -rf dbt/jaffle-data
+      - task: clean-data
+      - uv run dbt clean --project-dir dbt --profiles-dir dbt
+      - rm -f jaffle_shop.duckdb
 
   load:
     cmds:
@@ -63,4 +69,4 @@ tasks:
       - task: install
       - task: gen
       - task: seed
-      - task: clean
+      - task: clean-data

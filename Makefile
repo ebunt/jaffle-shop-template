@@ -2,7 +2,7 @@ YEARS ?= 6
 DBT_DIR := dbt
 ARGS ?=
 
-.PHONY: help venv install gen deps seed run test build clean load
+.PHONY: help venv install gen deps seed run test build clean-data clean load
 
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -41,7 +41,11 @@ build: deps ## Run dbt build (ARGS="..." for extra dbt flags)
 	$(SEED_CMD)
 	uv run dbt build --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR) $(ARGS)
 
-clean: ## Remove generated data
-	rm -rf $(DBT_DIR)/jaffle-data
+clean-data: ## Remove generated seed data (keeps the warehouse; used by load)
+	rm -rf $(DBT_DIR)/seeds/jaffle-data
 
-load: venv install gen seed clean ## Run the full venv -> install -> gen -> seed -> clean pipeline
+clean: clean-data ## Remove generated data, dbt artifacts, and the local warehouse
+	uv run dbt clean --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR)
+	rm -f jaffle_shop.duckdb
+
+load: venv install gen seed clean-data ## Run the full venv -> install -> gen -> seed -> clean-data pipeline

@@ -58,8 +58,9 @@ The project ships with both a `Makefile` and a `Taskfile.yml` covering the same 
 | `run`     | `make run`             | `task run`             | Run dbt models (`dbt run`)                              |
 | `test`    | `make test`            | `task test`            | Run dbt tests (`dbt test`)                              |
 | `build`   | `make build`           | `task build`           | Run `dbt build` (seed, run, test)                       |
-| `clean`   | `make clean`           | `task clean`           | Remove generated seed data                              |
-| `load`    | `make load`            | `task load`            | Full pipeline: venv → install → gen → seed → clean      |
+| `clean-data` | `make clean-data`   | `task clean-data`      | Remove generated seed data (keeps the warehouse)         |
+| `clean`   | `make clean`           | `task clean`           | Remove generated data, dbt artifacts, and the local warehouse |
+| `load`    | `make load`            | `task load`            | Full pipeline: venv → install → gen → seed → clean-data  |
 
 `seed`, `run`, `test`, and `build` all depend on `deps` and will install dbt packages automatically before running. `run`, `test`, and `build` also seed the warehouse first — the staging models read from the seeds via `source()`, not `ref()`, so dbt won't do this for you automatically.
 
