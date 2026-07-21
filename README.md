@@ -2,7 +2,7 @@
 
 This is a sandbox project for exploring the basic functionality and latest features of dbt. It's based on a fictional restaurant called the Jaffle Shop that serves [jaffles](https://en.wikipedia.org/wiki/Pie_iron).
 
-This README will guide you through setting up the project on dbt Cloud. Working through this example should give you a good sense of how dbt Cloud works and what's involved with setting up your own project. We'll also _optionally_ cover some intermediate topics like setting up Environments and Jobs in dbt Cloud, working with a larger dataset, and setting up pre-commit hooks if you'd like.
+This README will guide you through setting up the project on dbt Cloud. Working through this example should give you a good sense of how dbt Cloud works and what's involved with setting up your own project. We'll also _optionally_ cover some intermediate topics like setting up Environments and Jobs in dbt Cloud, working with a larger dataset, and setting up prek hooks if you'd like.
 
 > [!NOTE]
 > This project is geared towards folks learning dbt Cloud with a cloud warehouse. If you're brand new to dbt, we recommend starting with the [dbt Learn](https://learn.getdbt.com/) platform. It's a free, interactive way to learn dbt, and it's a great way to get started if you're new to the tool. If you just want to try dbt locally as quickly as possible without setting up a data warehouse check out [`jaffle_shop_duckdb`](https://github.com/dbt-labs/jaffle_shop_duckdb).
@@ -36,7 +36,7 @@ Ready to go? Grab some water and a nice snack, and let's dig in!
    2. [Working with a larger dataset](#-working-with-a-larger-dataset)
       1. [Load the data from S3](#-load-the-data-from-s3)
       2. [Generate via `jafgen` and seed the data with dbt Core](#-generate-via-jafgen-and-seed-the-data-with-dbt-core)
-   3. [Pre-commit and SQLFluff](#-pre-commit-and-sqlfluff)
+   3. [prek and SQLFluff](#-prek-and-sqlfluff)
 
 ## 💾 Prerequisites
 
@@ -144,7 +144,7 @@ The following should now be done:
 - Development environment set up and ready to go
 - The project built and tested
 
-You're free to explore the Jaffle Shop from here, or if you want to learn more about [setting up Environment and Jobs](#%EF%B8%8F-setting-up-dbt-cloud-environments-and-jobs), [generating a larger dataset](#-working-with-a-larger-dataset), or [setting up pre-commit hooks](#-pre-commit-and-sqlfluff) to standardize formatting and linting workflows, carry on!
+You're free to explore the Jaffle Shop from here, or if you want to learn more about [setting up Environment and Jobs](#%EF%B8%8F-setting-up-dbt-cloud-environments-and-jobs), [generating a larger dataset](#-working-with-a-larger-dataset), or [setting up prek hooks](#-prek-and-sqlfluff) to standardize formatting and linting workflows, carry on!
 
 ## 🌅 Going further
 
@@ -298,13 +298,13 @@ task clean
 
 You now have a much more interesting and expansive dataset in your `raw` schema to build with! You should now run a `dbt build` to build the project with the new data into your dev schema or trigger your `Production Build` Job in dbt Cloud to build the project in your `prod` schema.
 
-### 🔍 Pre-commit and SQLFluff
+### 🔍 prek and SQLFluff
 
-There's an optional tool included with the project called `pre-commit`.
+There's an optional tool included with the project called `prek`.
 
-[pre-commit](https://pre-commit.com/) automatically runs a suite of of processes on your code, like linters and formatters, when you commit. If it finds an issue and updates a file, you'll need to stage the changes and commit them again (the first commit will not have gone through because pre-commit found and fixed an issue). The outcome of this is that your code will be more consistent automatically, and everybody's changes will be running through the same set of processes. We recommend it for any project.
+[prek](https://prek.j178.dev/) is a faster, drop-in replacement for [pre-commit](https://pre-commit.com/), written in Rust. It automatically runs a suite of processes on your code, like linters and formatters, when you commit. If it finds an issue and updates a file, you'll need to stage the changes and commit them again (the first commit will not have gone through because prek found and fixed an issue). The outcome of this is that your code will be more consistent automatically, and everybody's changes will be running through the same set of processes. We recommend it for any project.
 
-You can see the configuration for pre-commit in the `.pre-commit-config.yaml` file. It's installed as part of the project's `requirements.txt`, but you'll need to opt-in to using it by running `pre-commit install`. This will install _git hooks_ which run when you commit. You can also run the checks manually with `pre-commit run --all-files` to see what it does without making a commit.
+You can see the configuration for prek in the `.pre-commit-config.yaml` file (prek reads the same config format as pre-commit). It's installed as part of the project's `requirements.txt`, but you'll need to opt-in to using it by running `prek install`. This will install _git hooks_ which run when you commit. You can also run the checks manually with `prek run --all-files` to see what it does without making a commit.
 
 At present the following checks are run:
 
