@@ -44,17 +44,22 @@ jobs:
           restore-keys: |
             dbt-state-main-
 
+      # Seeding is a separate, one-time invocation: the staging models
+      # reference the seeded tables via source(), not ref(), so dbt has no
+      # DAG edge between the seed and the models that depend on it — running
+      # them in the same `dbt build` leaves their relative order undefined.
       - name: Full build (no prior state to diff against)
         if: steps.restore-state.outputs.cache-matched-key == ''
-        run: >
+        run: |
+          uv run dbt seed --project-dir dbt --profiles-dir dbt --vars '{"load_source_data": true}'
           uv run dbt build --project-dir dbt --profiles-dir dbt
-          --vars '{"load_source_data": true}'
 
+      # The restored DuckDB file already has data seeded from main's build,
+      # so this only needs to (re)build the nodes state:modified+ selects.
       - name: Slim build (only modified nodes + downstream)
         if: steps.restore-state.outputs.cache-matched-key != ''
         run: |
           cp ci-state/jaffle_shop.duckdb jaffle_shop.duckdb
           uv run dbt build --project-dir dbt --profiles-dir dbt \
             --select "state:modified+" --defer --favor-state \
-            --state "$GITHUB_WORKSPACE/ci-state" \
-            --vars '{"load_source_data": true}'
+            --state "$GITHUB_WORKSPACE/ci-state"

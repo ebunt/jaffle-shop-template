@@ -16,9 +16,15 @@ jobs:
           enable-cache: true
       - run: uv sync --frozen
       - run: uv run dbt deps --project-dir dbt --profiles-dir dbt
+
+      # Seeding is a separate, one-time invocation: the staging models
+      # reference the seeded tables via source(), not ref(), so dbt has no
+      # DAG edge between the seed and the models that depend on it — running
+      # them in the same `dbt build` leaves their relative order undefined.
       - run: >
-          uv run dbt build --project-dir dbt --profiles-dir dbt
+          uv run dbt seed --project-dir dbt --profiles-dir dbt
           --vars '{"load_source_data": true}'
+      - run: uv run dbt build --project-dir dbt --profiles-dir dbt
 
       # Saved as this run's "prod state": PR builds restore it to diff
       # against (`state:modified`) and to defer unselected nodes to,
