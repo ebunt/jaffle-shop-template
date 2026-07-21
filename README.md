@@ -354,7 +354,7 @@ npx aws-cdk@latest bootstrap   # once per AWS account/region
 npx aws-cdk@latest deploy
 ```
 
-This creates a VPC (public subnets only, no NAT — the task needs outbound internet for `dbt deps`/PyPI and AWS API access, but nothing needs to reach it), an S3 bucket for Iceberg table data and Athena query results, a Glue Database (`jaffle_shop`), an ECS Fargate task definition built from the repo's root `Dockerfile`, and a daily EventBridge Scheduler schedule (06:00 UTC — edit `DAILY_SCHEDULE_CRON` in `infra/jaffle_shop_infra/stack.py` to change it) that runs the task via `ecs:RunTask`.
+This creates a VPC (public subnets only, no NAT — the task needs outbound internet for `dbt deps`/PyPI and AWS API access, but nothing needs to reach it), an S3 bucket for Iceberg table data and Athena query results, an ECS Fargate task definition (Graviton/ARM64) built from the repo's root `Dockerfile`, and a daily EventBridge Scheduler schedule (06:00 UTC — edit `DAILY_SCHEDULE_CRON` in `infra/jaffle_shop_infra/stack.py` to change it) that runs the task via `ecs:RunTask`. The `jaffle_shop`/`raw` Glue Databases it reads/writes are expected to already exist in the target account (see [INFRA.md](INFRA.md)) — this stack references them by name rather than creating them.
 
 > [!NOTE]
 > The S3 bucket and CloudWatch log group are configured to be deleted along with their contents on `cdk destroy` — convenient for a sandbox project, but don't reuse this stack as-is for data you need to keep.

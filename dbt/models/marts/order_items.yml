@@ -8,8 +8,9 @@ models:
       - name: order_id
         data_tests:
           - relationships:
-              to: ref('orders')
-              field: order_id
+              arguments:
+                to: ref('orders')
+                field: order_id
 
 unit_tests:
   - name: test_supply_costs_sum_correctly
