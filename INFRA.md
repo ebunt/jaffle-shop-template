@@ -142,11 +142,16 @@ the execution role, and not the scheduler role.
 
 ### Glue + Athena + Iceberg
 
-- **Glue Database** (`jaffle_shop`) is the catalog namespace — the thing
-  Athena's `SHOW TABLES IN jaffle_shop` and dbt's `schema` config both
-  refer to. CDK creates it (`glue.CfnDatabase`) so it exists before the
-  first task run; the task definition has an explicit
-  `add_dependency(glue_database)` to enforce that ordering in CloudFormation.
+- **Two Glue Databases** are the catalog namespaces — `jaffle_shop` (what
+  Athena's `SHOW TABLES IN jaffle_shop` and dbt's `schema` config refer to,
+  used by staging views and marts) and `raw` (seeds land here instead —
+  `dbt/macros/generate_schema_name.sql` hardcodes seeds to a `raw` schema
+  regardless of target). CDK creates both (`glue.CfnDatabase` x2) so they
+  exist before the first task run; the task definition has an explicit
+  `add_dependency(...)` on each to enforce that ordering in CloudFormation.
+  The task role's Glue IAM policy is scoped to both databases — if you add a
+  third schema to the dbt project, it needs a matching database + IAM update
+  here.
 - **Athena** is the query engine — dbt issues `CREATE TABLE AS SELECT` /
   `INSERT INTO` via Athena's `StartQueryExecution` API, and Athena reads
   and writes the actual Parquet/Iceberg files in S3. There's no database
@@ -345,6 +350,6 @@ everything else the stack created — see
 |---|---|
 | Task stops immediately with an exec format error | Image built for the wrong architecture — shouldn't happen given `Platform.LINUX_AMD64` is pinned, but check if that got removed. |
 | Task can't reach PyPI / dbt Hub (`dbt deps` hangs or times out) | Confirm the task actually got a public IP (`assignPublicIp=ENABLED` in the network config) — without one, a public-subnet-only task with no NAT has no route out. |
-| `AccessDenied` on a Glue or Athena call | The task role's policy is scoped to the `jaffle_shop` database/tables and the `primary` workgroup specifically — a new database/workgroup name needs a matching IAM resource ARN update in `stack.py`. |
+| `AccessDenied` on a Glue or Athena call | The task role's policy is scoped to the `jaffle_shop`/`raw` databases and their tables, and the `primary` workgroup, specifically — a new database/workgroup name needs a matching IAM resource ARN update in `stack.py`. |
 | Scheduler shows the run failed to even start (never reaches CloudWatch Logs) | Check `SchedulerExecutionRole`'s permissions, not the task role — this is EventBridge Scheduler failing to call `ecs:RunTask` at all, before the container ever starts. |
 | `cdk deploy` fails trying to build the image | Docker isn't running locally, or isn't running for the CDK CLI's user context. |

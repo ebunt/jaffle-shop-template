@@ -18,6 +18,9 @@ from constructs import Construct
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GLUE_DATABASE_NAME = "jaffle_shop"
+# dbt/macros/generate_schema_name.sql hardcodes seeds to a separate "raw"
+# schema regardless of target, so seeds land in their own Glue Database.
+RAW_DATABASE_NAME = "raw"
 ATHENA_WORKGROUP = "primary"
 DAILY_SCHEDULE_CRON = "cron(0 6 * * ? *)"  # 06:00 UTC daily
 
@@ -58,6 +61,14 @@ class JaffleShopStack(Stack):
                 name=GLUE_DATABASE_NAME
             ),
         )
+        raw_glue_database = glue.CfnDatabase(
+            self,
+            "RawGlueDatabase",
+            catalog_id=Aws.ACCOUNT_ID,
+            database_input=glue.CfnDatabase.DatabaseInputProperty(
+                name=RAW_DATABASE_NAME
+            ),
+        )
 
         # Build for linux/amd64 explicitly: FargateTaskDefinition defaults to
         # X86_64, but DockerImageAsset otherwise builds for the host's
@@ -88,14 +99,15 @@ class JaffleShopStack(Stack):
         data_bucket.grant_read_write(task_role)
 
         catalog_arn = f"arn:{Aws.PARTITION}:glue:{Aws.REGION}:{Aws.ACCOUNT_ID}:catalog"
-        database_arn = (
-            f"arn:{Aws.PARTITION}:glue:{Aws.REGION}:{Aws.ACCOUNT_ID}:"
-            f"database/{GLUE_DATABASE_NAME}"
-        )
-        table_arn = (
-            f"arn:{Aws.PARTITION}:glue:{Aws.REGION}:{Aws.ACCOUNT_ID}:"
-            f"table/{GLUE_DATABASE_NAME}/*"
-        )
+        glue_database_names = [GLUE_DATABASE_NAME, RAW_DATABASE_NAME]
+        database_arns = [
+            f"arn:{Aws.PARTITION}:glue:{Aws.REGION}:{Aws.ACCOUNT_ID}:database/{name}"
+            for name in glue_database_names
+        ]
+        table_arns = [
+            f"arn:{Aws.PARTITION}:glue:{Aws.REGION}:{Aws.ACCOUNT_ID}:table/{name}/*"
+            for name in glue_database_names
+        ]
         task_role.add_to_policy(
             iam.PolicyStatement(
                 actions=[
@@ -113,7 +125,7 @@ class JaffleShopStack(Stack):
                     "glue:BatchDeletePartition",
                     "glue:BatchDeleteTable",
                 ],
-                resources=[catalog_arn, database_arn, table_arn],
+                resources=[catalog_arn, *database_arns, *table_arns],
             )
         )
         workgroup_arn = (
@@ -152,8 +164,9 @@ class JaffleShopStack(Stack):
                 "DBT_ATHENA_WORKGROUP": ATHENA_WORKGROUP,
             },
         )
-        # The task queries a database that must exist before the first run.
+        # The task queries these databases, which must exist before the first run.
         task_definition.node.add_dependency(glue_database)
+        task_definition.node.add_dependency(raw_glue_database)
 
         task_security_group = ec2.SecurityGroup(
             self,
@@ -229,6 +242,7 @@ class JaffleShopStack(Stack):
         CfnOutput(self, "LogGroupName", value=log_group.log_group_name)
         CfnOutput(self, "DataBucketName", value=data_bucket.bucket_name)
         CfnOutput(self, "GlueDatabaseName", value=GLUE_DATABASE_NAME)
+        CfnOutput(self, "RawGlueDatabaseName", value=RAW_DATABASE_NAME)
         CfnOutput(self, "AthenaWorkgroup", value=ATHENA_WORKGROUP)
         CfnOutput(
             self, "TaskSecurityGroupId", value=task_security_group.security_group_id

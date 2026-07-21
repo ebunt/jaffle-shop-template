@@ -2,6 +2,11 @@ FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
 
 WORKDIR /app
 
+# make runs the pipeline; git is needed for the git-hosted package in
+# dbt/packages.yml (dbt-audit-helper), pulled down by `dbt deps`.
+RUN apt-get update && apt-get install -y --no-install-recommends make git \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY pyproject.toml uv.lock requirements.txt ./
 RUN uv venv && uv pip install -q -r requirements.txt
 
