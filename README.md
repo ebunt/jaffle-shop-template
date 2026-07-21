@@ -22,6 +22,7 @@ Ready to go? Grab some water and a nice snack, and let's dig in!
 
 1. [Prerequisites](#-prerequisites)
 2. [Local commands (Make / Task)](#-local-commands-make--task)
+   1. [Local environment variables](#-local-environment-variables)
 3. [Create new repo from template](#-create-new-repo-from-template)
 3. [Platform setup](#%EF%B8%8F-platform-setup)
    1. [dbt Cloud IDE](#%EF%B8%8F-dbt-cloud-ide-most-beginner-friendly)
@@ -37,6 +38,7 @@ Ready to go? Grab some water and a nice snack, and let's dig in!
       1. [Load the data from S3](#-load-the-data-from-s3)
       2. [Generate via `jafgen` and seed the data with dbt Core](#-generate-via-jafgen-and-seed-the-data-with-dbt-core)
    3. [prek and SQLFluff](#-prek-and-sqlfluff)
+6. [Running in AWS (Fargate + EventBridge Scheduler)](#%EF%B8%8F-running-in-aws-fargate--eventbridge-scheduler)
 
 ## 💾 Prerequisites
 
@@ -72,6 +74,16 @@ task run -- -s customers
 
 > [!NOTE]
 > The CSVs under `dbt/seeds/jaffle-data/` are checked into the repo as headers only, to keep the repo small while still showing each raw table's schema. Run `make gen` / `task gen` (optionally with `YEARS=N`) to generate real data locally before seeding — don't commit the regenerated files back.
+
+### 🔑 Local environment variables
+
+The default `dev` target (DuckDB) needs no environment variables — every command above works out of the box. You only need this if you want to run the `prod` target (Athena) from your laptop against infra you've already deployed (see [INFRA.md](INFRA.md)).
+
+1. Install [direnv](https://direnv.net/) (`brew install direnv`) and hook it into your shell (e.g. `eval "$(direnv hook zsh)"` in `~/.zshrc`).
+2. `cp .env.example .env` and fill in the `DBT_ATHENA_*` values (get them with `aws cloudformation describe-stacks --stack-name JaffleShopStack --query "Stacks[0].Outputs" --output table`).
+3. `direnv allow` in the repo root.
+
+`.env` is gitignored — direnv loads it automatically whenever you `cd` into the repo, and any `make`/`task`/`uv run` command picks up the values from there. Without direnv, `set -a && source .env && set +a` before running commands does the same thing manually.
 
 ## 📓 Create new repo from template
 
@@ -319,5 +331,31 @@ At present the following checks are run:
 At present, the popular SQL linter and formatter SQLFluff doesn't play nicely with the dbt Cloud CLI, so we've omitted it from this project _for now_. We've already built the backend for linting via the Cloud CLI, so this will change very soon! At present if you'd like auto-formatting and linting for SQL, check out the dbt Cloud IDE!
 
 We have kept a `.sqlfluff` config file to show what that looks like, and to future proof the repo for when the Cloud CLI support linting and formatting.
+
+## ☁️ Running in AWS (Fargate + EventBridge Scheduler)
+
+In addition to dbt Cloud, this project can run on a schedule in AWS: a Fargate task builds the Docker image, runs `make gen build` (regenerate synthetic data, then seed/run/test), and writes Iceberg tables to a Glue Database on S3 via the `prod` dbt target (Amazon Athena). An EventBridge Scheduler schedule triggers the task once a day. The infra is defined as an AWS CDK (Python) app in `infra/`.
+
+See [INFRA.md](INFRA.md) for a full explanation of each piece and worked examples — triggering a run on demand, tailing logs, querying Athena, changing the schedule, tearing it down.
+
+**Targets**
+
+- `dev` (default, used by the `make`/`task` commands above) — local DuckDB file
+- `prod` (used by the Fargate task) — Amazon Athena, querying Iceberg tables in a Glue Database backed by S3. Selected via the `DBT_TARGET=prod` environment variable; see `dbt/profiles.yml`.
+
+**Deploying the infra**
+
+```bash
+cd infra
+uv venv && uv pip install -r requirements.txt
+source .venv/bin/activate
+npx aws-cdk@latest bootstrap   # once per AWS account/region
+npx aws-cdk@latest deploy
+```
+
+This creates a VPC (public subnets only, no NAT — the task needs outbound internet for `dbt deps`/PyPI and AWS API access, but nothing needs to reach it), an S3 bucket for Iceberg table data and Athena query results, a Glue Database (`jaffle_shop`), an ECS Fargate task definition built from the repo's root `Dockerfile`, and a daily EventBridge Scheduler schedule (06:00 UTC — edit `DAILY_SCHEDULE_CRON` in `infra/jaffle_shop_infra/stack.py` to change it) that runs the task via `ecs:RunTask`.
+
+> [!NOTE]
+> The S3 bucket and CloudWatch log group are configured to be deleted along with their contents on `cdk destroy` — convenient for a sandbox project, but don't reuse this stack as-is for data you need to keep.
 
 [^1]: Again, I can't emphasize enough that you should not use dbt and seeds for data loading in a production project. This is just for convenience within this learning project.

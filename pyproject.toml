@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "dbt-athena-community>=1.11.0",
     "dbt-duckdb>=1.10.1",
     "go-task-bin>=3.52.0",
     "jafgen>=0.4.14",

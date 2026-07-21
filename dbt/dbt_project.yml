@@ -27,6 +27,7 @@ vars:
 seeds:
   jaffle_shop:
     +schema: raw
+    +table_type: iceberg # ignored by the duckdb adapter; used by the athena/prod target
     jaffle-data:
       +enabled: "{{ var('load_source_data', false) }}"
       # Explicit types since the checked-in seed CSVs are headers only (no
@@ -79,6 +80,7 @@ seeds:
 
 models:
   jaffle_shop:
+    +table_type: iceberg # ignored by the duckdb adapter; used by the athena/prod target
     staging:
       +materialized: view
     marts:

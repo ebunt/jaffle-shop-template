@@ -1,7 +1,18 @@
 jaffle_shop:
-  target: dev
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
   outputs:
     dev:
       type: duckdb
       path: 'jaffle_shop.duckdb'
       threads: 24
+    prod:
+      type: athena
+      region_name: "{{ env_var('AWS_REGION', 'us-east-1') }}"
+      database: awsdatacatalog
+      schema: "{{ env_var('DBT_ATHENA_SCHEMA', 'jaffle_shop') }}"
+      work_group: "{{ env_var('DBT_ATHENA_WORKGROUP', 'primary') }}"
+      s3_staging_dir: "s3://{{ env_var('DBT_ATHENA_BUCKET') }}/athena-results/"
+      s3_data_dir: "s3://{{ env_var('DBT_ATHENA_BUCKET') }}/data/"
+      s3_data_naming: table_unique
+      num_retries: 3
+      threads: 4

@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+venv
+__pycache__
+.pytest_cache
+.ruff_cache
+infra
+dbt/target
+dbt/dbt_packages
+dbt/logs
+dbt/seeds/jaffle-data/*.csv
+*.duckdb
+.DS_Store
