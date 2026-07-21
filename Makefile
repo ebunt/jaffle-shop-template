@@ -41,7 +41,9 @@ build: deps ## Run dbt build (ARGS="..." for extra dbt flags)
 	$(SEED_CMD)
 	uv run dbt build --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR) $(ARGS)
 
-clean: ## Remove generated data
+clean: ## Remove generated data, dbt artifacts, and the local warehouse
 	rm -rf $(DBT_DIR)/jaffle-data
+	uv run dbt clean --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR)
+	rm -f jaffle_shop.duckdb
 
 load: venv install gen seed clean ## Run the full venv -> install -> gen -> seed -> clean pipeline
