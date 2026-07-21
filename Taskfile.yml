@@ -28,19 +28,29 @@ tasks:
       - >
         uv run dbt seed --project-dir dbt --profiles-dir dbt --full-refresh --vars '{"load_source_data": true}' {{.CLI_ARGS}}
 
-  run:
+  # Staging models reference the jaffle-data seeds via source(), not ref(),
+  # so dbt has no DAG edge between them -- the seed must load in its own
+  # invocation before run/test/build, or the "raw" schema won't exist yet.
+  _ensure-seeded:
+    internal: true
     cmds:
       - task: deps
+      - >
+        uv run dbt seed --project-dir dbt --profiles-dir dbt --full-refresh --vars '{"load_source_data": true}'
+
+  run:
+    cmds:
+      - task: _ensure-seeded
       - uv run dbt run --project-dir dbt --profiles-dir dbt {{.CLI_ARGS}}
 
   test:
     cmds:
-      - task: deps
+      - task: _ensure-seeded
       - uv run dbt test --project-dir dbt --profiles-dir dbt {{.CLI_ARGS}}
 
   build:
     cmds:
-      - task: deps
+      - task: _ensure-seeded
       - uv run dbt build --project-dir dbt --profiles-dir dbt {{.CLI_ARGS}}
 
   clean:

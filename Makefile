@@ -21,16 +21,24 @@ gen: ## Generate seed data with jafgen
 deps: ## Install dbt package dependencies
 	uv run dbt deps --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR)
 
+# Staging models reference the jaffle-data seeds via source(), not ref(), so
+# dbt has no DAG edge between them -- the seed must load in its own
+# invocation before run/test/build, or the "raw" schema won't exist yet.
+SEED_CMD = uv run dbt seed --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR) --full-refresh --vars '{"load_source_data": true}'
+
 seed: deps ## Seed the warehouse with generated data (ARGS="..." for extra dbt flags)
-	uv run dbt seed --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR) --full-refresh --vars '{"load_source_data": true}' $(ARGS)
+	$(SEED_CMD) $(ARGS)
 
 run: deps ## Run dbt models (ARGS="..." for extra dbt flags, e.g. ARGS="-s customers")
+	$(SEED_CMD)
 	uv run dbt run --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR) $(ARGS)
 
 test: deps ## Run dbt tests (ARGS="..." for extra dbt flags)
+	$(SEED_CMD)
 	uv run dbt test --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR) $(ARGS)
 
 build: deps ## Run dbt build (ARGS="..." for extra dbt flags)
+	$(SEED_CMD)
 	uv run dbt build --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR) $(ARGS)
 
 clean: ## Remove generated data
