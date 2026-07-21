@@ -70,6 +70,9 @@ make run ARGS="-s customers"
 task run -- -s customers
 ```
 
+> [!NOTE]
+> The CSVs under `dbt/seeds/jaffle-data/` are checked into the repo as headers only, to keep the repo small while still showing each raw table's schema. Run `make gen` / `task gen` (optionally with `YEARS=N`) to generate real data locally before seeding — don't commit the regenerated files back.
+
 ## 📓 Create new repo from template
 
 1. <details>

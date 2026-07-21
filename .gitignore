@@ -14,3 +14,5 @@ profiles.yml
 
 .ruff_cache
 __pycache__
+
+*.duckdb

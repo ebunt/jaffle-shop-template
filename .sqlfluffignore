@@ -2,3 +2,4 @@ target
 dbt_packages
 macros
 .venv
+dbt/models/marts/metricflow_time_spine.sql
