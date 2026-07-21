@@ -8,6 +8,7 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_ecr_assets as ecr_assets,
     aws_ecs as ecs,
+    # aws_glue as glue,  # uncomment along with the CfnDatabase blocks below
     aws_iam as iam,
     aws_logs as logs,
     aws_s3 as s3,
@@ -70,6 +71,31 @@ class JaffleShopStack(Stack):
         # `removal_policy=RemovalPolicy.RETAIN` set on those constructs
         # first, then remove them, so CloudFormation orphans rather than
         # deletes them.
+        #
+        # Uncomment this (and the `aws_glue as glue` import above) to have
+        # CDK create the databases instead, e.g. when deploying into a
+        # fresh account where they don't already exist:
+        #
+        # glue_database = glue.CfnDatabase(
+        #     self,
+        #     "GlueDatabase",
+        #     catalog_id=Aws.ACCOUNT_ID,
+        #     database_input=glue.CfnDatabase.DatabaseInputProperty(
+        #         name=GLUE_DATABASE_NAME
+        #     ),
+        # )
+        # raw_glue_database = glue.CfnDatabase(
+        #     self,
+        #     "RawGlueDatabase",
+        #     catalog_id=Aws.ACCOUNT_ID,
+        #     database_input=glue.CfnDatabase.DatabaseInputProperty(
+        #         name=RAW_DATABASE_NAME
+        #     ),
+        # )
+        #
+        # ...and add a dependency so the task waits for them to exist:
+        # task_definition.node.add_dependency(glue_database)
+        # task_definition.node.add_dependency(raw_glue_database)
 
         # Build for linux/arm64 explicitly: paired with runtime_platform=ARM64
         # below, this runs the task on Graviton (cheaper than X86_64) and
