@@ -2,7 +2,10 @@ config-version: 2
 
 name: "jaffle_shop"
 version: "3.0.0"
-require-dbt-version: ">=1.5.0"
+# >=1.10.5: generic test configs use the nested `arguments:` property
+# (models/marts/*.yml, models/staging/*.yml), which older dbt versions
+# don't parse -- see MissingArgumentsPropertyInGenericTestDeprecation.
+require-dbt-version: ">=1.10.5"
 
 dbt-cloud:
   project-id: 275557 # Put your project id here

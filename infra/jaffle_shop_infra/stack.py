@@ -56,6 +56,20 @@ class JaffleShopStack(Stack):
         # prior dbt Cloud runs against this account -- so this stack only
         # references them by name via IAM, and never creates or (on
         # `cdk destroy`) deletes them.
+        #
+        # If you're deploying this template into a *fresh* account (neither
+        # database exists yet), you'll need to create them yourself first,
+        # or add glue.CfnDatabase resources back in.
+        #
+        # If you'd previously deployed an older commit of this stack that
+        # DID include glue.CfnDatabase resources for these two databases
+        # (and that deploy succeeded, so CloudFormation now owns them):
+        # deploying this version as-is will DELETE both databases and their
+        # table metadata, because removing a resource from the template
+        # defaults to DeletionPolicy=Delete. Deploy once with
+        # `removal_policy=RemovalPolicy.RETAIN` set on those constructs
+        # first, then remove them, so CloudFormation orphans rather than
+        # deletes them.
 
         # Build for linux/arm64 explicitly: paired with runtime_platform=ARM64
         # below, this runs the task on Graviton (cheaper than X86_64) and
