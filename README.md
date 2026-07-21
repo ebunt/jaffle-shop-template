@@ -306,6 +306,9 @@ There's an optional tool included with the project called `prek`.
 
 You can see the configuration for prek in the `.pre-commit-config.yaml` file (prek reads the same config format as pre-commit). It's installed as part of the project's `requirements.txt`, but you'll need to opt-in to using it by running `prek install`. This will install _git hooks_ which run when you commit. You can also run the checks manually with `prek run --all-files` to see what it does without making a commit.
 
+> [!NOTE]
+> If you'd previously run `pre-commit install` in this repo, re-run `prek install` to replace the old hook — otherwise your existing `.git/hooks/pre-commit` will still try to invoke `pre-commit`, which is no longer a project dependency.
+
 At present the following checks are run:
 
 - `ruff` - an incredibly fast linter and formatter for Python, in case you add any Python models
