@@ -60,6 +60,9 @@ The task has a public IP and reaches the internet directly (no NAT
 Gateway); nothing reaches in. All AWS access — Glue, Athena, S3 — goes
 through the task's IAM role, not network routing.
 
+See [ROLES.md](ROLES.md) for a full diagram of the three IAM roles this
+stack uses, what each is scoped to, and why they're kept separate.
+
 ## Concepts
 
 ### dbt targets: `dev` vs `prod`
@@ -106,8 +109,13 @@ avoid the NAT bill) — not a change to this doc's assumptions.
 The root `Dockerfile` installs the project with `uv`, copies in `dbt/` and
 the `Makefile`, and defaults to `CMD ["make", "gen", "build"]` — regenerate
 synthetic seed data, then seed/run/test. `infra/`'s `ecr_assets.DockerImageAsset`
-builds this image and CDK pushes it to a CDK-managed asset ECR repo (there's
-no hand-maintained ECR repo to look after).
+builds this image and CDK pushes it to CDK's shared, content-hash-tagged
+bootstrap asset repo — that construct has no option to publish to a
+different repo name. A `cdk_ecr_deployment.ECRDeployment` custom resource
+then copies the built image into a dedicated `jaffle-shop-dbt` ECR repo
+(tagged with the same content hash), and the task pulls from that named
+repo, not the shared bootstrap one. The task definition explicitly depends
+on this copy completing before it can run.
 
 The asset is built with `platform=ecr_assets.Platform.LINUX_ARM64` pinned
 explicitly, paired with `runtime_platform=CpuArchitecture.ARM64` on the task
@@ -130,17 +138,20 @@ container in a crash loop every time `dbt build` finished successfully.
 
 ### Three IAM roles
 
-It's easy to conflate these; they're deliberately separate, least-privilege:
+It's easy to conflate these; they're deliberately separate, least-privilege,
+and explicitly named (rather than left to CDK's auto-generated physical
+names) so they're identifiable in the account. Full breakdown and a diagram
+in [ROLES.md](ROLES.md) — summary:
 
 | Role | Assumed by | Used for |
 |---|---|---|
-| `DbtTaskRole` | `ecs-tasks.amazonaws.com` | What the *running dbt process* can do: read/write the S3 data bucket, read/write the Glue Database and its tables, run Athena queries against the `primary` workgroup. |
-| execution role (auto-created by CDK on the task definition) | `ecs-tasks.amazonaws.com` | What *ECS itself* needs to start the container: pull the image from the asset ECR repo, write container stdout/stderr to the CloudWatch log group. Never touches your data. |
-| `SchedulerExecutionRole` | `scheduler.amazonaws.com`, restricted to this account (`aws:SourceAccount` condition) | What *EventBridge Scheduler* needs to start the task: `ecs:RunTask` on this task definition family, and `iam:PassRole` for the two roles above (restricted via `iam:PassedToService=ecs-tasks.amazonaws.com` so it can't be used to pass arbitrary roles to arbitrary services). |
+| `jaffle-shop-dbt-task-role` | `ecs-tasks.amazonaws.com` | What the *running dbt process* can do: read/write the S3 data bucket, read/write the Glue Database and its tables, run Athena queries against the `primary` workgroup. |
+| `jaffle-shop-dbt-task-execution-role` | `ecs-tasks.amazonaws.com` | What *ECS itself* needs to start the container: pull the image from the `jaffle-shop-dbt` ECR repo, write container stdout/stderr to the CloudWatch log group. Never touches your data. |
+| `jaffle-shop-scheduler-role` | `scheduler.amazonaws.com`, restricted to this account (`aws:SourceAccount` condition) | What *EventBridge Scheduler* needs to start the task: `ecs:RunTask` on this task definition family, and `iam:PassRole` for the two roles above (restricted via `iam:PassedToService=ecs-tasks.amazonaws.com` so it can't be used to pass arbitrary roles to arbitrary services). |
 
 If you add a new AWS integration to the dbt project (say, an S3 bucket the
-task needs to read from), it's `DbtTaskRole` you grant permissions to — not
-the execution role, and not the scheduler role.
+task needs to read from), it's `jaffle-shop-dbt-task-role` you grant
+permissions to — not the execution role, and not the scheduler role.
 
 ### Glue + Athena + Iceberg
 
@@ -187,11 +198,12 @@ used those before.
 
 ### Removal policy: this is a sandbox
 
-The data bucket and CloudWatch log group are both created with
-`RemovalPolicy.DESTROY`, and the bucket additionally has
-`auto_delete_objects=True`. That means `cdk destroy` actually removes
-everything, including any Iceberg table data and query result files sitting
-in the bucket — there's no safety net. That's intentional for a learning
+The data bucket, the `jaffle-shop-dbt` ECR repo, and the CloudWatch log
+group are all created with `RemovalPolicy.DESTROY` (the bucket and the ECR
+repo additionally have `auto_delete_objects=True`/`empty_on_delete=True`).
+That means `cdk destroy` actually removes everything, including any Iceberg
+table data and query result files sitting in the bucket and any images in
+the repo — there's no safety net. That's intentional for a learning
 project (cheap to nuke and recreate), and exactly the property you'd want
 to remove first if you repurposed this stack for anything you'd mind
 losing.
@@ -285,7 +297,7 @@ aws ecs run-task \
 ```
 
 This uses your own AWS credentials to call `ecs:RunTask`/`iam:PassRole`
-(not `SchedulerExecutionRole`, which only EventBridge Scheduler assumes) —
+(not `jaffle-shop-scheduler-role`, which only EventBridge Scheduler assumes) —
 so it needs your IAM principal to have those permissions too.
 
 ### Tailing the logs
@@ -362,5 +374,5 @@ everything else the stack created — see
 | Task stops immediately with an exec format error | Image built for the wrong architecture — shouldn't happen given `Platform.LINUX_ARM64` is pinned to match `CpuArchitecture.ARM64` on the task definition, but check if either got removed or the two drifted apart. |
 | Task can't reach PyPI / dbt Hub (`dbt deps` hangs or times out) | Confirm the task actually got a public IP (`assignPublicIp=ENABLED` in the network config) — without one, a public-subnet-only task with no NAT has no route out. |
 | `AccessDenied` on a Glue or Athena call | The task role's policy is scoped to the `jaffle_shop`/`raw` databases and their tables, and the `primary` workgroup, specifically — a new database/workgroup name needs a matching IAM resource ARN update in `stack.py`. |
-| Scheduler shows the run failed to even start (never reaches CloudWatch Logs) | Check `SchedulerExecutionRole`'s permissions, not the task role — this is EventBridge Scheduler failing to call `ecs:RunTask` at all, before the container ever starts. |
+| Scheduler shows the run failed to even start (never reaches CloudWatch Logs) | Check `jaffle-shop-scheduler-role`'s permissions, not the task role — this is EventBridge Scheduler failing to call `ecs:RunTask` at all, before the container ever starts. |
 | `cdk deploy` fails trying to build the image | Docker isn't running locally, or isn't running for the CDK CLI's user context. |
