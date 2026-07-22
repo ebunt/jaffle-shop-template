@@ -198,6 +198,12 @@ losing.
 
 ## Usage
 
+Every command below has a `make infra-*` / `task infra-*` shortcut at the
+repo root (see the README's [Running in AWS](README.md#%EF%B8%8F-running-in-aws-fargate--eventbridge-scheduler)
+section) that handles the venv/`cd infra` bookkeeping for you. What
+follows is the same commands run by hand, for when you want to see
+exactly what's happening or run something the shortcuts don't cover.
+
 All commands below assume you're in `infra/` with its venv activated:
 
 ```bash

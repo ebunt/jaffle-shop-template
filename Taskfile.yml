@@ -4,6 +4,19 @@ silent: true
 
 vars:
   YEARS: 6
+  STACK_NAME: JaffleShopStack
+  # infra-deploy et al defer to app.py's own region resolution
+  # (CDK_DEFAULT_REGION env var, else "us-east-1"); infra-run/infra-logs call
+  # `aws` directly instead, which needs an explicit --region, so resolve it
+  # the same way here (falling back through AWS config before "us-east-1",
+  # since CDK_DEFAULT_REGION is normally only set by the cdk CLI itself, not
+  # ambient in a plain shell).
+  AWS_REGION:
+    sh: echo "${CDK_DEFAULT_REGION:-$(aws configure get region 2>/dev/null || echo us-east-1)}"
+  # PATH-prepend rather than `. .venv/bin/activate`: uv's generated activate
+  # script isn't strict-POSIX-sh compatible (it uses zsh-only syntax that
+  # breaks under Task's embedded shell), whereas this is portable.
+  CDK: 'PATH="$PWD/.venv/bin:$PATH" npx aws-cdk@latest'
 
 tasks:
   venv:
@@ -70,3 +83,48 @@ tasks:
       - task: gen
       - task: seed
       - task: clean-data
+
+  infra-install:
+    cmds:
+      - cd infra && (test -d .venv || uv venv) && uv pip install -q -r requirements.txt
+
+  infra-bootstrap:
+    cmds:
+      - task: infra-install
+      - cd infra && {{.CDK}} bootstrap --app "python3 app.py"
+
+  infra-synth:
+    cmds:
+      - task: infra-install
+      - cd infra && {{.CDK}} synth --app "python3 app.py"
+
+  infra-diff:
+    cmds:
+      - task: infra-install
+      - cd infra && {{.CDK}} diff --app "python3 app.py"
+
+  infra-deploy:
+    cmds:
+      - task: infra-install
+      - cd infra && {{.CDK}} deploy --app "python3 app.py"
+
+  infra-destroy:
+    cmds:
+      - task: infra-install
+      - cd infra && {{.CDK}} destroy --app "python3 app.py"
+
+  infra-run:
+    cmds:
+      - |
+        CLUSTER=$(aws cloudformation describe-stacks --stack-name {{.STACK_NAME}} --region {{.AWS_REGION}} --query "Stacks[0].Outputs[?OutputKey=='ClusterName'].OutputValue" --output text)
+        TASKDEF=$(aws cloudformation describe-stacks --stack-name {{.STACK_NAME}} --region {{.AWS_REGION}} --query "Stacks[0].Outputs[?OutputKey=='TaskDefinitionArn'].OutputValue" --output text)
+        SUBNETS=$(aws cloudformation describe-stacks --stack-name {{.STACK_NAME}} --region {{.AWS_REGION}} --query "Stacks[0].Outputs[?OutputKey=='PublicSubnetIds'].OutputValue" --output text)
+        SG=$(aws cloudformation describe-stacks --stack-name {{.STACK_NAME}} --region {{.AWS_REGION}} --query "Stacks[0].Outputs[?OutputKey=='TaskSecurityGroupId'].OutputValue" --output text)
+        aws ecs run-task --cluster "$CLUSTER" --task-definition "$TASKDEF" --launch-type FARGATE --region {{.AWS_REGION}} \
+          --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}"
+
+  infra-logs:
+    cmds:
+      - |
+        LOGGROUP=$(aws cloudformation describe-stacks --stack-name {{.STACK_NAME}} --region {{.AWS_REGION}} --query "Stacks[0].Outputs[?OutputKey=='LogGroupName'].OutputValue" --output text)
+        aws logs tail "$LOGGROUP" --follow --region {{.AWS_REGION}}
