@@ -16,10 +16,18 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "dbt-metricflow[dbt-duckdb]>=0.13.0",
     "pytest>=9.1.1",
     "ruff>=0.15.22",
     "ty>=0.0.61",
 ]
+
+[tool.uv]
+# dbt-core 1.11.12 pins mashumaro<3.15, but mashumaro <3.15 crashes on
+# Python 3.14 (UnserializableField on Optional[str] in JSONObjectSchema).
+# dbt-common (the actual consumer) allows mashumaro<4.0,>=3.9, so forcing a
+# newer mashumaro than dbt-core's stale upper bound is safe here.
+override-dependencies = ["mashumaro[msgpack]>=3.17"]
 
 [tool.ty.src]
 # infra/ is a self-contained CDK app with its own venv/requirements.txt (see
