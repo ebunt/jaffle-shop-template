@@ -3,7 +3,13 @@ DBT_DIR := dbt
 ARGS ?=
 INFRA_DIR := infra
 STACK_NAME := JaffleShopStack
-AWS_REGION := us-east-1
+# infra-deploy et al defer to app.py's own region resolution
+# (CDK_DEFAULT_REGION env var, else "us-east-1"); infra-run/infra-logs call
+# `aws` directly instead, which needs an explicit --region, so resolve it
+# the same way here (falling back through AWS config before "us-east-1",
+# since CDK_DEFAULT_REGION is normally only set by the cdk CLI itself, not
+# ambient in a plain shell).
+AWS_REGION := $(shell echo "$${CDK_DEFAULT_REGION:-$$(aws configure get region 2>/dev/null || echo us-east-1)}")
 # PATH-prepend rather than `. .venv/bin/activate`: uv's generated activate
 # script isn't strict-POSIX-sh compatible (it uses zsh-only syntax that
 # breaks under some /bin/sh implementations), whereas this is portable.
