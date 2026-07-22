@@ -347,12 +347,21 @@ See [INFRA.md](INFRA.md) for a full explanation of each piece and worked example
 **Deploying the infra**
 
 ```bash
-cd infra
-uv venv && uv pip install -r requirements.txt
-source .venv/bin/activate
-npx aws-cdk@latest bootstrap   # once per AWS account/region
-npx aws-cdk@latest deploy
+make infra-bootstrap   # once per AWS account/region
+make infra-deploy
 ```
+
+`task infra-bootstrap` / `task infra-deploy` work the same way. Full set of targets — thin wrappers around the same `cdk`/`aws` commands documented in [INFRA.md](INFRA.md):
+
+| Target            | `make`                  | `task`                  | Description                                            |
+|-------------------|--------------------------|--------------------------|---------------------------------------------------------|
+| `infra-bootstrap` | `make infra-bootstrap`  | `task infra-bootstrap`  | One-time CDK bootstrap for this AWS account/region       |
+| `infra-synth`     | `make infra-synth`      | `task infra-synth`      | Synthesize the CloudFormation template (local only)       |
+| `infra-diff`      | `make infra-diff`       | `task infra-diff`       | Show what the next `infra-deploy` would change             |
+| `infra-deploy`    | `make infra-deploy`     | `task infra-deploy`     | Create or update the AWS stack                             |
+| `infra-destroy`   | `make infra-destroy`    | `task infra-destroy`    | Destroy the AWS stack and all its resources                |
+| `infra-run`       | `make infra-run`        | `task infra-run`        | Manually trigger the Fargate task once, outside the schedule |
+| `infra-logs`      | `make infra-logs`       | `task infra-logs`       | Tail the Fargate task's CloudWatch logs                    |
 
 This creates a VPC (public subnets only, no NAT — the task needs outbound internet for `dbt deps`/PyPI and AWS API access, but nothing needs to reach it), an S3 bucket for Iceberg table data and Athena query results, an ECS Fargate task definition (Graviton/ARM64) built from the repo's root `Dockerfile`, and a daily EventBridge Scheduler schedule (06:00 UTC — edit `DAILY_SCHEDULE_CRON` in `infra/jaffle_shop_infra/stack.py` to change it) that runs the task via `ecs:RunTask`. The `jaffle_shop`/`raw` Glue Databases it reads/writes are expected to already exist in the target account (see [INFRA.md](INFRA.md)) — this stack references them by name rather than creating them.
 
