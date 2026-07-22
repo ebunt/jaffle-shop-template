@@ -24,17 +24,27 @@ If you want more historical data later, bump `cpu`/`memory_limit_mib` on
 ## EventBridge Scheduler is currently DISABLED (as of 2026-07-22)
 
 The daily dbt build schedule (`JaffleShopStack-DailyDbtBuildSchedule-D5KBZ4XI3XY2`,
-06:00 UTC) was manually disabled via the AWS CLI so it wouldn't fire while
-testing something locally. This was **not** done through a CDK code
-change — `infra/jaffle_shop_infra/stack.py` still declares the schedule
-with no explicit `state=`, which defaults to `ENABLED`. A `cdk deploy`
-that happens to touch the `DailyDbtBuildSchedule` resource itself (e.g.
-changing the cron expression) would reset it back to enabled; unrelated
-deploys (image updates, IAM changes, etc.) won't.
+06:00 UTC) is disabled so it doesn't fire while testing locally. This is
+now controlled by `SCHEDULE_STATE` in `infra/jaffle_shop_infra/stack.py`
+(currently `"DISABLED"`) -- **not** by toggling it via the AWS CLI/console.
 
-The OOM issue above (the reason it was unsafe to re-enable) is now fixed
-and validated live. Re-enable when ready:
+That distinction matters: an earlier version of this doc said "unrelated
+deploys (image updates, IAM changes, etc.)" wouldn't reset a manually-set
+state, which is wrong -- [Codex caught this on #9](https://github.com/ebunt/jaffle-shop-template/pull/9#discussion_r3626530385).
+The schedule's `Target` embeds the task definition's ARN
+(`Target.EcsParameters.TaskDefinitionArn`), which changes on *every* new
+task definition revision -- including plain image or environment-variable
+updates, not just changes to the schedule itself. That means
+CloudFormation has to update the `DailyDbtBuildSchedule` resource on
+nearly every deploy, and applies the full desired state from the
+template each time. With no explicit `state=` in the code, that desired
+state defaults to `ENABLED` -- silently re-enabling a manually-disabled
+schedule. Confirmed this actually happened: the CLI-disabled schedule
+flipped back to `ENABLED` after the YEARS-fix deploy (which only changed
+a container env var), before `SCHEDULE_STATE` existed. Re-verified after
+adding it: deployed again (task definition revision bump, same as
+before), schedule stayed `DISABLED`.
 
-```bash
-aws scheduler update-schedule --region us-east-1 --cli-input-json file://<(aws scheduler get-schedule --name JaffleShopStack-DailyDbtBuildSchedule-D5KBZ4XI3XY2 --region us-east-1 | jq 'del(.CreationDate,.LastModificationDate,.Arn) | .State = "ENABLED"')
-```
+**To change it**: edit `SCHEDULE_STATE` in `stack.py` and `cdk deploy` --
+not the AWS CLI/console, since the next deploy will silently override
+whatever you set out-of-band.

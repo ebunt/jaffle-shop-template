@@ -23,6 +23,13 @@ GLUE_DATABASE_NAME = "jaffle_shop"
 RAW_DATABASE_NAME = "raw"
 ATHENA_WORKGROUP = "primary"
 DAILY_SCHEDULE_CRON = "cron(0 6 * * ? *)"  # 06:00 UTC daily
+# "ENABLED" | "DISABLED". Toggling this via the AWS CLI/console instead of
+# here doesn't stick: CloudFormation applies State's default ("ENABLED")
+# any time it has to update this resource for an unrelated reason -- e.g.
+# every task definition change, including image/env var updates, since
+# the schedule's Target embeds the task definition's ARN (which changes
+# per revision). Change it here and redeploy instead.
+SCHEDULE_STATE = "DISABLED"
 # The task is sized at 1024 CPU / 2048 MiB; `make gen`'s default YEARS=6
 # OOM-killed it (jafgen holds all the synthetic data in memory before
 # writing it out). YEARS=1 is what every live validation run since has
@@ -255,6 +262,7 @@ class JaffleShopStack(Stack):
         scheduler.CfnSchedule(
             self,
             "DailyDbtBuildSchedule",
+            state=SCHEDULE_STATE,
             schedule_expression=DAILY_SCHEDULE_CRON,
             schedule_expression_timezone="UTC",
             flexible_time_window=scheduler.CfnSchedule.FlexibleTimeWindowProperty(
