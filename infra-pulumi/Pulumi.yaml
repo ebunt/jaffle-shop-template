@@ -1,0 +1,6 @@
+name: jaffle-shop-pulumi
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: Pulumi (Python) rebuild of infra/'s CDK stack, for comparison. See infra-pulumi/README.md.
