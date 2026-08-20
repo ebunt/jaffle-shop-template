@@ -4,17 +4,32 @@ sources:
   - name: ecom
     schema: raw
     description: E-commerce data for the Jaffle Shop
+    # jafgen always generates data in a fixed historical window (not
+    # relative to "now"), so thresholds are years (dbt only supports
+    # minute/hour/day, hence the day counts below) -- loose enough to pass
+    # against jafgen's data while still catching a genuinely stale/broken
+    # load.
+    freshness:
+      warn_after: {count: 1825, period: day} # ~5 years
+      error_after: {count: 3650, period: day} # ~10 years
     tables:
+      # No timestamp column to use as loaded_at_field, and duckdb doesn't
+      # support metadata-based freshness -- opt out of the source-level
+      # default so these don't error out.
       - name: raw_customers
         description: One record per person who has purchased one or more items
+        freshness: null
       - name: raw_orders
         description: One record per order (consisting of one or more order items)
         loaded_at_field: ordered_at
       - name: raw_items
-        description: Items included in an order
+        description: Items included in an ordeupdate the @re[@README.md](file:///Users/eddie/Development/agents/coding-agent/README.md)
+        freshness: null
       - name: raw_stores
         loaded_at_field: opened_at
       - name: raw_products
         description: One record per SKU for items sold in stores
+        freshness: null
       - name: raw_supplies
         description: One record per supply per SKU of items sold in stores
+        freshness: null
