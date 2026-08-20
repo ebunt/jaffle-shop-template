@@ -128,8 +128,8 @@ support, none of which this project currently uses.
 ## Examples (real output, this branch)
 
 All commands below run from the repo root (not `dbt/` — see the gotcha at
-the end) with `DBT_PROJECT_DIR=dbt DBT_PROFILES_DIR=dbt`, after `task gen`,
-`task seed`, and `task run` have populated the local duckdb warehouse.
+the end) with `DBT_PROJECT_DIR=dbt DBT_PROFILES_DIR=dbt`, after `just gen`,
+`just seed`, and `just run` have populated the local duckdb warehouse.
 
 Simple metric, grouped by day:
 
@@ -263,7 +263,7 @@ needs `mf`/`dbt-metricflow`, i.e. this branch.
 ## Gotchas
 
 - **`mf`'s duckdb path is cwd-relative, not `--project-dir`-relative.** Run
-  it from the repo root (matching how `Taskfile.yml`/`Makefile` invoke
+  it from the repo root (matching how `justfile`/`Makefile` invoke
   `dbt`), not from inside `dbt/` — otherwise it creates a second, empty
   `dbt/jaffle_shop.duckdb` instead of finding the real one at the repo root.
 - **There's an unrelated `mf` on `PATH`** from TeX/Metafont

@@ -75,7 +75,7 @@ jaffle_shop:
   target: "{{ env_var('DBT_TARGET', 'dev') }}"
 ```
 
-- **`dev`** — local DuckDB file (`jaffle_shop.duckdb`). What `make`/`task`
+- **`dev`** — local DuckDB file (`jaffle_shop.duckdb`). What `make`/`just`
   use locally; untouched by any of this.
 - **`prod`** — Amazon Athena. What the Fargate task uses (it sets
   `DBT_TARGET=prod` in its container environment). Points at the Glue
@@ -210,7 +210,7 @@ losing.
 
 ## Usage
 
-Every command below has a `make infra-*` / `task infra-*` shortcut at the
+Every command below has a `make infra-*` / `just infra-*` shortcut at the
 repo root (see the README's [Running in AWS](README.md#%EF%B8%8F-running-in-aws-fargate--eventbridge-scheduler)
 section) that handles the venv/`cd infra` bookkeeping for you. What
 follows is the same commands run by hand, for when you want to see

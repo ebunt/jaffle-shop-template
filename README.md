@@ -21,7 +21,7 @@ Ready to go? Grab some water and a nice snack, and let's dig in!
 ## Table of contents
 
 1. [Prerequisites](#-prerequisites)
-2. [Local commands (Make / Task)](#-local-commands-make--task)
+2. [Local commands (Make / Just)](#-local-commands-make--just)
    1. [Local environment variables](#-local-environment-variables)
 3. [Create new repo from template](#-create-new-repo-from-template)
 3. [Platform setup](#%EF%B8%8F-platform-setup)
@@ -46,23 +46,23 @@ Ready to go? Grab some water and a nice snack, and let's dig in!
 - A data warehouse (BigQuery, Snowflake, Redshift, Databricks, or Postgres) with adequate permissions to create a fresh database for this project and run dbt in it
 - _Optional_ Python 3.9 or higher (for generating synthetic data with `jafgen`)
 
-## 🧰 Local commands (Make / Task)
+## 🧰 Local commands (Make / Just)
 
-The project ships with both a `Makefile` and a `Taskfile.yml` covering the same set of local commands, so use whichever you have installed — `make` is preinstalled on most systems; `task` can be installed [here](https://taskfile.dev/#/installation). All commands operate on the dbt project in `dbt/`.
+The project ships with both a `Makefile` and a `justfile` covering the same set of local commands, so use whichever you have installed — `make` is preinstalled on most systems; `just` can be installed [here](https://just.systems/man/en/installation.html). All commands operate on the dbt project in `dbt/`.
 
-| Target    | `make`                | `task`                | Description                                          |
+| Target    | `make`                | `just`                | Description                                          |
 |-----------|------------------------|------------------------|-------------------------------------------------------|
-| `venv`    | `make venv`            | `task venv`            | Create a virtual environment with `uv`                 |
-| `install` | `make install`         | `task install`         | Install project dependencies with `uv`                 |
-| `gen`     | `make gen YEARS=6`     | `task gen YEARS=6`     | Generate synthetic seed data with `jafgen`              |
-| `deps`    | `make deps`            | `task deps`            | Install dbt package dependencies (`dbt deps`)           |
-| `seed`    | `make seed`            | `task seed`            | Seed the warehouse with the generated data              |
-| `run`     | `make run`             | `task run`             | Run dbt models (`dbt run`)                              |
-| `test`    | `make test`            | `task test`            | Run dbt tests (`dbt test`)                              |
-| `build`   | `make build`           | `task build`           | Run `dbt build` (seed, run, test)                       |
-| `clean-data` | `make clean-data`   | `task clean-data`      | Remove generated seed data (keeps the warehouse)         |
-| `clean`   | `make clean`           | `task clean`           | Remove generated data, dbt artifacts, and the local warehouse |
-| `load`    | `make load`            | `task load`            | Full pipeline: venv → install → gen → seed → clean-data  |
+| `venv`    | `make venv`            | `just venv`            | Create a virtual environment with `uv`                 |
+| `install` | `make install`         | `just install`         | Install project dependencies with `uv`                 |
+| `gen`     | `make gen YEARS=6`     | `just gen 6`           | Generate synthetic seed data with `jafgen`              |
+| `deps`    | `make deps`            | `just deps`            | Install dbt package dependencies (`dbt deps`)           |
+| `seed`    | `make seed`            | `just seed`            | Seed the warehouse with the generated data              |
+| `run`     | `make run`             | `just run`             | Run dbt models (`dbt run`)                              |
+| `test`    | `make test`            | `just test`            | Run dbt tests (`dbt test`)                              |
+| `build`   | `make build`           | `just build`           | Run `dbt build` (seed, run, test)                       |
+| `clean-data` | `make clean-data`   | `just clean-data`      | Remove generated seed data (keeps the warehouse)         |
+| `clean`   | `make clean`           | `just clean`           | Remove generated data, dbt artifacts, and the local warehouse |
+| `load`    | `make load`            | `just load`            | Full pipeline: venv → install → gen → seed → clean-data  |
 
 `seed`, `run`, `test`, and `build` all depend on `deps` and will install dbt packages automatically before running. `run`, `test`, and `build` also seed the warehouse first — the staging models read from the seeds via `source()`, not `ref()`, so dbt won't do this for you automatically.
 
@@ -70,11 +70,11 @@ To pass extra dbt flags through, e.g. to run a single model or a specific target
 
 ```bash
 make run ARGS="-s customers"
-task run -- -s customers
+just run -s customers
 ```
 
 > [!NOTE]
-> The CSVs under `dbt/seeds/jaffle-data/` are checked into the repo as headers only, to keep the repo small while still showing each raw table's schema. Run `make gen` / `task gen` (optionally with `YEARS=N`) to generate real data locally before seeding — don't commit the regenerated files back.
+> The CSVs under `dbt/seeds/jaffle-data/` are checked into the repo as headers only, to keep the repo small while still showing each raw table's schema. Run `make gen` / `just gen` (optionally with `YEARS=N`) to generate real data locally before seeding — don't commit the regenerated files back.
 
 ### 🔑 Local environment variables
 
@@ -84,7 +84,7 @@ The default `dev` target (DuckDB) needs no environment variables — every comma
 2. `cp .env.example .env` and fill in the `DBT_ATHENA_*` values (get them with `aws cloudformation describe-stacks --stack-name JaffleShopStack --query "Stacks[0].Outputs" --output table`).
 3. `direnv allow` in the repo root.
 
-`.env` is gitignored — direnv loads it automatically whenever you `cd` into the repo, and any `make`/`task`/`uv run` command picks up the values from there. Without direnv, `set -a && source .env && set +a` before running commands does the same thing manually.
+`.env` is gitignored — direnv loads it automatically whenever you `cd` into the repo, and any `make`/`just`/`uv run` command picks up the values from there. Without direnv, `set -a && source .env && set +a` before running commands does the same thing manually.
 
 ## 📓 Create new repo from template
 
@@ -250,16 +250,16 @@ To load the data from S3, consult the [dbt Documentation's Quickstart Guides](ht
 You'll need to be working on the command line for this option. If you're more comfortable working via web apps, the above method is the path you'll need. [`jafgen`](https://github.com/dbt-labs/jaffle-shop-generator) is a simple tool for generating synthetic Jaffle Shop data that is maintained on a volunteer-basis by dbt Labs employees. This project is more interesting with a larger dataset generated and uploaded to your warehouse. 6 years is a nice amount to fully observe trends like growth, seasonality, and buyer personas that exist in the data. Uploading this amount of data requires a few extra steps, but we'll walk you through them. If you have a preferred way of loading CSVs into your warehouse or an S3 bucket, that will also work just fine, the generated data is just CSV files.
 
 > [!TIP]
-> If you'd like to explore further on the command line, but are a little intimidated by the terminal, we've included configuration for a _task runner_ called, fittingly, `task`. It's a simple way to run the commands you need to get started with dbt. You can install it by following the instructions [here](https://taskfile.dev/#/installation). We'll call out the `task` based alternative to each command below that provides an 'easy button'. It's a useful tool to have installed regardless.
+> If you'd like to explore further on the command line, but are a little intimidated by the terminal, we've included configuration for a _command runner_ called `just`. It's a simple way to run the commands you need to get started with dbt. You can install it by following the instructions [here](https://just.systems/man/en/installation.html). We'll call out the `just` based alternative to each command below that provides an 'easy button'. It's a useful tool to have installed regardless.
 
 1. Create a `profiles.yml` file in the root of your project. This file is already `.gitignore`d so you can keep your credentials safe. If you'd prefer you can instead set up a `profiles.yml` file at the `~/.dbt/profiles.yml` path instead to be extra sure you don't accidentally commit the file.
 
 2. [Add a profile for your warehouse connection in this file](https://docs.getdbt.com/docs/core/connect-data-platform/connection-profiles#connecting-to-your-warehouse-using-the-command-line) and add this configuration to your `dbt_project.yml` file as a top-level key called `profile` e.g. `profile: my-profile-name`.
 
 > [!IMPORTANT]
-> If you do decide to use `task` there is a super-task (`task load`) that will do all of the below steps for you. Just run `task load YEARS=[integer of years to generate] DB=[name of warehouse]` e.g. `task YEARS=4 DB=bigquery` or `task YEARS=7 DB=redshift` etc to perform all the commands necessary to generate and seed the data once your `profiles.yml` file is set up.
+> If you do decide to use `just` there is a super-recipe (`just load`) that will do all of the below steps for you. Just run `just load` (optionally `just gen [integer of years to generate]` first to change the year count) to perform all the commands necessary to generate and seed the data once your `profiles.yml` file is set up.
 
-3. Create a new virtual environment in your project (I like to call mine `.venv`) and activate it, then install the project's dependencies in it. This will install the `jafgen` tool which you can use to generate the larger datasets. Then install `dbt-core` and your warehouse's adapter. We install dbt Core temporarily because by connecting directly to your warehouse, it can upload larger file sizes than the dbt Cloud server[^1]. You can do this manually or with `task`:
+3. Create a new virtual environment in your project (I like to call mine `.venv`) and activate it, then install the project's dependencies in it. This will install the `jafgen` tool which you can use to generate the larger datasets. Then install `dbt-core` and your warehouse's adapter. We install dbt Core temporarily because by connecting directly to your warehouse, it can upload larger file sizes than the dbt Cloud server[^1]. You can do this manually or with `just`:
 
 ```bash
 python3 -m venv .venv
@@ -271,8 +271,8 @@ python3 -m pip install dbt-core dbt-[your warehouse adapter] # e.g. dbt-bigquery
 **OR**
 
 ```bash
-task venv
-task install DB=[name of warehouse] # e.g. task install DB=bigquery
+just venv
+just install
 ```
 
 > [!NOTE]
@@ -292,8 +292,8 @@ dbt seed --full-refresh --vars '{"load_source_data": true}'
 **OR**
 
 ```bash
-task gen YEARS=6
-task seed
+just gen 6
+just seed
 ```
 
 6. Remove the `jaffle-data` folder, then uninstall the temporary dbt Core installation. Again, this was to allow you to seed the large data files, you don't need it for the rest of the project which will use the dbt Cloud CLI. You can then delete your `profiles.yml` file and the configuration in your `dbt_project.yml` file. You should also delete the `jaffle-data` path from the `seeds:` config in your `dbt_project.yml`.
@@ -306,7 +306,7 @@ python3 -m pip uninstall dbt-core dbt-[your warehouse adapter] # e.g. dbt-bigque
 **OR**
 
 ```bash
-task clean
+just clean
 ```
 
 You now have a much more interesting and expansive dataset in your `raw` schema to build with! You should now run a `dbt build` to build the project with the new data into your dev schema or trigger your `Production Build` Job in dbt Cloud to build the project in your `prod` schema.
@@ -341,7 +341,7 @@ See [INFRA.md](INFRA.md) for a full explanation of each piece and worked example
 
 **Targets**
 
-- `dev` (default, used by the `make`/`task` commands above) — local DuckDB file
+- `dev` (default, used by the `make`/`just` commands above) — local DuckDB file
 - `prod` (used by the Fargate task) — Amazon Athena, querying Iceberg tables in a Glue Database backed by S3. Selected via the `DBT_TARGET=prod` environment variable; see `dbt/profiles.yml`.
 
 **Deploying the infra**
@@ -351,17 +351,17 @@ make infra-bootstrap   # once per AWS account/region
 make infra-deploy
 ```
 
-`task infra-bootstrap` / `task infra-deploy` work the same way. Full set of targets — thin wrappers around the same `cdk`/`aws` commands documented in [INFRA.md](INFRA.md):
+`just infra-bootstrap` / `just infra-deploy` work the same way. Full set of targets — thin wrappers around the same `cdk`/`aws` commands documented in [INFRA.md](INFRA.md):
 
-| Target            | `make`                  | `task`                  | Description                                            |
+| Target            | `make`                  | `just`                  | Description                                            |
 |-------------------|--------------------------|--------------------------|---------------------------------------------------------|
-| `infra-bootstrap` | `make infra-bootstrap`  | `task infra-bootstrap`  | One-time CDK bootstrap for this AWS account/region       |
-| `infra-synth`     | `make infra-synth`      | `task infra-synth`      | Synthesize the CloudFormation template (local only)       |
-| `infra-diff`      | `make infra-diff`       | `task infra-diff`       | Show what the next `infra-deploy` would change             |
-| `infra-deploy`    | `make infra-deploy`     | `task infra-deploy`     | Create or update the AWS stack                             |
-| `infra-destroy`   | `make infra-destroy`    | `task infra-destroy`    | Destroy the AWS stack and all its resources                |
-| `infra-run`       | `make infra-run`        | `task infra-run`        | Manually trigger the Fargate task once, outside the schedule |
-| `infra-logs`      | `make infra-logs`       | `task infra-logs`       | Tail the Fargate task's CloudWatch logs                    |
+| `infra-bootstrap` | `make infra-bootstrap`  | `just infra-bootstrap`  | One-time CDK bootstrap for this AWS account/region       |
+| `infra-synth`     | `make infra-synth`      | `just infra-synth`      | Synthesize the CloudFormation template (local only)       |
+| `infra-diff`      | `make infra-diff`       | `just infra-diff`       | Show what the next `infra-deploy` would change             |
+| `infra-deploy`    | `make infra-deploy`     | `just infra-deploy`     | Create or update the AWS stack                             |
+| `infra-destroy`   | `make infra-destroy`    | `just infra-destroy`    | Destroy the AWS stack and all its resources                |
+| `infra-run`       | `make infra-run`        | `just infra-run`        | Manually trigger the Fargate task once, outside the schedule |
+| `infra-logs`      | `make infra-logs`       | `just infra-logs`       | Tail the Fargate task's CloudWatch logs                    |
 
 This creates a VPC (public subnets only, no NAT — the task needs outbound internet for `dbt deps`/PyPI and AWS API access, but nothing needs to reach it), an S3 bucket for Iceberg table data and Athena query results, an ECS Fargate task definition (Graviton/ARM64) built from the repo's root `Dockerfile`, and a daily EventBridge Scheduler schedule (06:00 UTC — edit `DAILY_SCHEDULE_CRON` in `infra/jaffle_shop_infra/stack.py` to change it) that runs the task via `ecs:RunTask`. The `jaffle_shop`/`raw` Glue Databases it reads/writes are expected to already exist in the target account (see [INFRA.md](INFRA.md)) — this stack references them by name rather than creating them.
 
