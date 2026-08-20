@@ -12,6 +12,16 @@ dbt-cloud:
 
 profile: jaffle_shop # Put your profile here
 
+flags:
+  # dbt-core's schema validation only recognizes bigquery's adapter-specific
+  # config keys (dataset/project) as non-custom; athena's (e.g. native_drop
+  # below) aren't in that allowlist yet even though dbt-athena itself
+  # supports them, so every dev-target (duckdb) parse falsely flags them as
+  # custom. Silence rather than move to `meta:`, since dbt-athena reads
+  # these from `config`, not `meta`.
+  warn_error_options:
+    silence: ["CustomKeyInConfigDeprecation"]
+
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["data-tests"]
