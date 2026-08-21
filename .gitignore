@@ -16,3 +16,4 @@ logs/
 __pycache__
 
 *.duckdb
+dbt/jaffle-data/

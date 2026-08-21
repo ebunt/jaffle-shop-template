@@ -25,7 +25,7 @@ flags:
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["data-tests"]
-seed-paths: ["seeds"]
+seed-paths: ["jaffle-data","seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
