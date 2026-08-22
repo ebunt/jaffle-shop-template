@@ -23,7 +23,7 @@ sources:
         description: One record per order (consisting of one or more order items)
         loaded_at_field: ordered_at
       - name: raw_items
-        description: Items included in an ordeupdate the @re[@README.md](file:///Users/eddie/Development/agents/coding-agent/README.md)
+        description: Items included in an order
         freshness: null
       - name: raw_stores
         loaded_at_field: opened_at

@@ -56,22 +56,22 @@ clean: clean-data
 load: venv install gen seed clean-data
 
 infra-install:
-    cd infra && (test -d .venv || uv venv) && uv pip install -q -r requirements.txt
+    cd infra/cdk && (test -d .venv || uv venv) && uv pip install -q -r requirements.txt
 
 infra-bootstrap: infra-install
-    cd infra && {{cdk}} bootstrap --app "python3 app.py"
+    cd infra/cdk && {{cdk}} bootstrap --app "python3 app.py"
 
 infra-synth: infra-install
-    cd infra && {{cdk}} synth --app "python3 app.py"
+    cd infra/cdk && {{cdk}} synth --app "python3 app.py"
 
 infra-diff: infra-install
-    cd infra && {{cdk}} diff --app "python3 app.py"
+    cd infra/cdk && {{cdk}} diff --app "python3 app.py"
 
 infra-deploy: infra-install
-    cd infra && {{cdk}} deploy --app "python3 app.py"
+    cd infra/cdk && {{cdk}} deploy --app "python3 app.py"
 
 infra-destroy: infra-install
-    cd infra && {{cdk}} destroy --app "python3 app.py"
+    cd infra/cdk && {{cdk}} destroy --app "python3 app.py"
 
 infra-run:
     #!/usr/bin/env bash

@@ -25,7 +25,9 @@ AWS_REGION = aws_config.get("region") or "us-east-1"
 GLUE_DATABASE_NAME = config.get("glueDatabaseName") or "jaffle_shop"
 RAW_DATABASE_NAME = config.get("rawDatabaseName") or "raw"
 ATHENA_WORKGROUP = config.get("athenaWorkgroup") or "primary"
-DAILY_SCHEDULE_CRON = config.get("dailyScheduleCron") or "cron(0 6 * * ? *)"  # 06:00 UTC daily
+DAILY_SCHEDULE_CRON = (
+    config.get("dailyScheduleCron") or "cron(0 6 * * ? *)"
+)  # 06:00 UTC daily
 # See stack.py's SCHEDULE_STATE comment: this gets re-applied on every `pulumi up`
 # that touches the schedule, so toggle it here, not via the console/CLI.
 SCHEDULE_STATE = config.get("scheduleState") or "DISABLED"
@@ -49,9 +51,7 @@ vpc = aws.ec2.Vpc(
     tags={"Name": f"{NAME_PREFIX}-vpc"},
 )
 
-igw = aws.ec2.InternetGateway(
-    "igw", vpc_id=vpc.id, tags={"Name": f"{NAME_PREFIX}-igw"}
-)
+igw = aws.ec2.InternetGateway("igw", vpc_id=vpc.id, tags={"Name": f"{NAME_PREFIX}-igw"})
 
 public_subnets = [
     aws.ec2.Subnet(
@@ -68,9 +68,7 @@ public_subnets = [
 public_rt = aws.ec2.RouteTable(
     "public-rt",
     vpc_id=vpc.id,
-    routes=[
-        aws.ec2.RouteTableRouteArgs(cidr_block="0.0.0.0/0", gateway_id=igw.id)
-    ],
+    routes=[aws.ec2.RouteTableRouteArgs(cidr_block="0.0.0.0/0", gateway_id=igw.id)],
     tags={"Name": f"{NAME_PREFIX}-public-rt"},
 )
 
@@ -156,8 +154,8 @@ ecr_auth = aws.ecr.get_authorization_token_output(registry_id=current.account_id
 
 dbt_image = docker_build.Image(
     "dbt-image",
-    context=docker_build.BuildContextArgs(location="../"),
-    dockerfile=docker_build.DockerfileArgs(location="../Dockerfile"),
+    context=docker_build.BuildContextArgs(location="../../"),
+    dockerfile=docker_build.DockerfileArgs(location="../../Dockerfile"),
     platforms=[docker_build.Platform.LINUX_ARM64],
     tags=[dbt_repo.repository_url.apply(lambda url: f"{url}:latest")],
     push=True,
@@ -211,10 +209,16 @@ task_s3_policy = aws.iam.Policy(
                     {
                         "Effect": "Allow",
                         "Action": [
-                            "s3:GetObject*", "s3:GetBucket*", "s3:List*",
-                            "s3:DeleteObject*", "s3:PutObject", "s3:PutObjectLegalHold",
-                            "s3:PutObjectRetention", "s3:PutObjectTagging",
-                            "s3:PutObjectVersionTagging", "s3:Abort*",
+                            "s3:GetObject*",
+                            "s3:GetBucket*",
+                            "s3:List*",
+                            "s3:DeleteObject*",
+                            "s3:PutObject",
+                            "s3:PutObjectLegalHold",
+                            "s3:PutObjectRetention",
+                            "s3:PutObjectTagging",
+                            "s3:PutObjectVersionTagging",
+                            "s3:Abort*",
                         ],
                         "Resource": [arn, f"{arn}/*"],
                     }
@@ -234,11 +238,21 @@ task_glue_policy = aws.iam.Policy(
                 {
                     "Effect": "Allow",
                     "Action": [
-                        "glue:GetDatabase", "glue:GetDatabases", "glue:GetTable", "glue:GetTables",
-                        "glue:GetTableVersion", "glue:GetTableVersions", "glue:GetPartition",
-                        "glue:GetPartitions", "glue:BatchGetPartition", "glue:CreateTable",
-                        "glue:UpdateTable", "glue:DeleteTable", "glue:BatchCreatePartition",
-                        "glue:BatchDeletePartition", "glue:BatchDeleteTable",
+                        "glue:GetDatabase",
+                        "glue:GetDatabases",
+                        "glue:GetTable",
+                        "glue:GetTables",
+                        "glue:GetTableVersion",
+                        "glue:GetTableVersions",
+                        "glue:GetPartition",
+                        "glue:GetPartitions",
+                        "glue:BatchGetPartition",
+                        "glue:CreateTable",
+                        "glue:UpdateTable",
+                        "glue:DeleteTable",
+                        "glue:BatchCreatePartition",
+                        "glue:BatchDeletePartition",
+                        "glue:BatchDeleteTable",
                     ],
                     "Resource": [
                         f"arn:{partition.partition}:glue:{AWS_REGION}:{current.account_id}:catalog",
@@ -263,8 +277,11 @@ task_athena_policy = aws.iam.Policy(
                 {
                     "Effect": "Allow",
                     "Action": [
-                        "athena:StartQueryExecution", "athena:GetQueryExecution",
-                        "athena:GetQueryResults", "athena:StopQueryExecution", "athena:GetWorkGroup",
+                        "athena:StartQueryExecution",
+                        "athena:GetQueryExecution",
+                        "athena:GetQueryResults",
+                        "athena:StopQueryExecution",
+                        "athena:GetWorkGroup",
                     ],
                     "Resource": f"arn:{partition.partition}:athena:{AWS_REGION}:{current.account_id}:workgroup/{ATHENA_WORKGROUP}",
                 }

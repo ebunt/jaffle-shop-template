@@ -19,8 +19,8 @@ data "aws_ecr_authorization_token" "this" {}
 # either way (the Dockerfile's CMD regenerates it inside the container).
 locals {
   dockerfile_inputs = concat(
-    [for f in ["Dockerfile", "pyproject.toml", "uv.lock", "README.md", "Makefile"] : "${path.module}/../${f}"],
-    [for f in fileset("${path.module}/..", "dbt/**") : "${path.module}/../${f}" if !startswith(f, "dbt/seeds/jaffle-data/")],
+    [for f in ["Dockerfile", "pyproject.toml", "uv.lock", "README.md", "Makefile"] : "${path.module}/../../${f}"],
+    [for f in fileset("${path.module}/../..", "dbt/**") : "${path.module}/../../${f}" if !startswith(f, "dbt/seeds/jaffle-data/")],
   )
   image_tag = substr(sha256(join("", [for f in local.dockerfile_inputs : filesha256(f)])), 0, 16)
 }
@@ -28,7 +28,7 @@ locals {
 resource "docker_image" "dbt" {
   name = "${aws_ecr_repository.dbt.repository_url}:${local.image_tag}"
   build {
-    context    = "${path.module}/.."
+    context    = "${path.module}/../.."
     dockerfile = "Dockerfile"
     platform   = "linux/arm64"
   }

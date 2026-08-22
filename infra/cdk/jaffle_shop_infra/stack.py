@@ -18,7 +18,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 # Explicit names below are prefixed with this so every jaffle-shop-owned IAM/ECS/etc.
 # artifact is identifiable in the account, instead of CDK's auto-generated
 # <stack>-<construct-path>-<hash> physical names. This only works because this
