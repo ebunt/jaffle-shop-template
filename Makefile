@@ -1,7 +1,7 @@
 YEARS ?= 6
 DBT_DIR := dbt
 ARGS ?=
-INFRA_DIR := infra
+INFRA_DIR := infra/cdk
 STACK_NAME := JaffleShopStack
 # infra-deploy et al defer to app.py's own region resolution
 # (CDK_DEFAULT_REGION env var, else "us-east-1"); infra-run/infra-logs call
